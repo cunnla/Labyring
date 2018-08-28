@@ -7,7 +7,6 @@
     <color name="colorField">#A5D6A7</color>
     <color name="colorHero">#1B5E20</color>
     <color name="colorTarget">#FFEA00</color>
-
-    <color name="colorButton">#F44336</color>
+    <color name="colorBomb">#F44336</color>
 
 </resources>

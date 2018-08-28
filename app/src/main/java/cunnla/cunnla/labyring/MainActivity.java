@@ -4,6 +4,10 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.AttributeSet;
@@ -17,12 +21,10 @@ import android.widget.LinearLayout;
 
 import org.xmlpull.v1.XmlPullParser;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
-    ImageButton buttonUp;
-    ImageButton buttonDown;
-    ImageButton buttonRight;
-    ImageButton buttonLeft;
+    SensorManager sensorManager;
+    Sensor sensor;
 
     Canvas canvas;
     DrawView drawView;
@@ -36,15 +38,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        buttonUp = (ImageButton)findViewById(R.id.buttonUp);
-        buttonUp.setOnClickListener(this);
-        buttonDown = (ImageButton)findViewById(R.id.buttonDown);
-        buttonDown.setOnClickListener(this);
-        buttonLeft = (ImageButton)findViewById(R.id.buttonLeft);
-        buttonLeft.setOnClickListener(this);
-        buttonRight = (ImageButton)findViewById(R.id.buttonRight);
-        buttonRight.setOnClickListener(this);
-
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
 
         drawView = new DrawView(this);
         drawView = (DrawView)findViewById(R.id.drawView);
@@ -53,32 +48,60 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
 
-
     @Override
-    public void onClick(View v) {
+    public void onSensorChanged(SensorEvent event) {
+        Log.d(TAG, "Sensor");
 
-        switch (v.getId()){
-            case R.id.buttonUp:
-                drawView.moveUp(canvas);
-                break;
-            case R.id.buttonDown:
-                drawView.moveDown(canvas);
-                break;
-            case R.id.buttonLeft:
-                drawView.moveLeft(canvas);
-                break;
-            case R.id.buttonRight:
-                drawView.moveRight(canvas);
-                break;
-        }
+        int p0 = (int)event.values[0];
+        int p1 = (int)event.values[1];
+        int p2 = (int)event.values[2];
+
+        Log.d(TAG, p0 + " "+p1+" "+p2);
+
+        if (p2<-10){ drawView.moveRight(canvas);}
+        if (p2>10) { drawView.moveLeft(canvas);}
+        if (p1>2) { drawView.moveUp(canvas);}
+        if (p1<-10) { drawView.moveDown(canvas);}
 
         if (drawView.winGame()) {
             Log.d(TAG, "YOU WIN!!! main");
             Intent intent = new Intent(this, WinGameActivity.class);
+            intent.putExtra("game", "Congratulations! You won the game!");
             startActivityForResult(intent, 1);
         }
 
+        if (drawView.explode()) {
+            Log.d(TAG, "Expload!!");
+            Intent intent = new Intent(this, WinGameActivity.class);
+            intent.putExtra("game", "Ooops! You lost the game!");
+            startActivityForResult(intent, 1);
+        }
+
+
+
     }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        Log.d(TAG, "On resume");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        sensorManager.unregisterListener(this);
+        Log.d(TAG, "On pause");
+    }
+
+
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -86,6 +109,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.d(TAG, "Got Result!");
         drawView.startAgain();
     }
+
 
 
 }

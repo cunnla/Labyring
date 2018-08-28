@@ -17,7 +17,7 @@ public class DrawView extends View {
     Paint paint;
 
     Path hero;
-    int heroStep = 30;
+    int heroStep = 15;
     int heroSize = 30;
     int heroXStart = 300;
     int heroYStart = 570;
@@ -26,6 +26,14 @@ public class DrawView extends View {
 
     Path walls;
     Path target;
+
+    Path bomb1;
+    int bomb1XStart = 90;
+    int bomb1YStart = 450;
+
+    Path bomb2;
+    int bomb2XStart = 510;
+    int bomb2YStart = 90;
 
     private static final String TAG = "myLogs";
 
@@ -40,6 +48,8 @@ public class DrawView extends View {
         paint = new Paint();
         walls = new Path();
         target = new Path();
+        bomb1 = new Path();
+        bomb2 = new Path();
         hero = new Path();
 
     }
@@ -50,6 +60,8 @@ public class DrawView extends View {
         paint = new Paint();
         walls = new Path();
         target = new Path();
+        bomb1 = new Path();
+        bomb2 = new Path();
         hero = new Path();
     }
 
@@ -59,6 +71,8 @@ public class DrawView extends View {
         paint = new Paint();
         walls = new Path();
         target = new Path();
+        bomb1 = new Path();
+        bomb2 = new Path();
         hero = new Path();
     }
 
@@ -105,6 +119,29 @@ public class DrawView extends View {
         target.lineTo(271, 90);
         target.close();
         canvas.drawPath(target, paint);
+
+        paint.setColor(getResources().getColor(R.color.colorBomb));
+        paint.setStrokeWidth(3);
+        paint.setStyle(Paint.Style.FILL);
+        bomb1.reset();
+        bomb1.moveTo(bomb1XStart, bomb1YStart);
+        bomb1.lineTo(bomb1XStart+30, bomb1YStart);
+        bomb1.lineTo(bomb1XStart+30, bomb1YStart+30);
+        bomb1.lineTo(bomb1XStart, bomb1YStart+30);
+        bomb1.close();
+        canvas.drawPath(bomb1, paint);
+
+        paint.setColor(getResources().getColor(R.color.colorBomb));
+        paint.setStrokeWidth(3);
+        paint.setStyle(Paint.Style.FILL);
+        bomb2.reset();
+        bomb2.moveTo(bomb2XStart, bomb2YStart);
+        bomb2.lineTo(bomb2XStart+30, bomb2YStart);
+        bomb2.lineTo(bomb2XStart+30, bomb2YStart+30);
+        bomb2.lineTo(bomb2XStart, bomb2YStart+30);
+        bomb2.close();
+        canvas.drawPath(bomb2, paint);
+
 
         paint.setColor(getResources().getColor(R.color.colorHero));
         paint.setStrokeWidth(3);
@@ -223,6 +260,15 @@ public class DrawView extends View {
             win = true;
         }
         return win;
+    }
+
+    public boolean explode(){
+        boolean expload = false;
+        if (  (heroX==bomb1XStart)&&(heroY==bomb1YStart) ||
+              (heroX==bomb2XStart)&&(heroY==bomb2YStart)             ){
+            expload = true;
+        }
+        return expload;
     }
 
     public void startAgain(){
