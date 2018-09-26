@@ -2,14 +2,18 @@ package cunnla.cunnla.labyring;
 
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.Region;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.graphics.Path;
+
+import static android.content.Context.MODE_PRIVATE;
 
 
 public class DrawView extends View {
@@ -38,6 +42,8 @@ public class DrawView extends View {
     private static final String TAG = "myLogs";
 
     boolean intersects = false;
+
+    SharedPreferences sPref;
 
 
     // ////////   constructors
@@ -263,12 +269,13 @@ public class DrawView extends View {
     }
 
     public boolean explode(){
-        boolean expload = false;
+        boolean explode = false;
+
         if (  (heroX==bomb1XStart)&&(heroY==bomb1YStart) ||
               (heroX==bomb2XStart)&&(heroY==bomb2YStart)             ){
-            expload = true;
+            explode = true;
         }
-        return expload;
+        return explode;
     }
 
     public void startAgain(){
@@ -276,5 +283,7 @@ public class DrawView extends View {
         heroY = heroYStart;
         this.invalidate();
     }
+
+
 
 }
