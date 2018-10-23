@@ -1,0 +1,5 @@
+The application is a maze game controlled by the Hyroscope.
+- it uses Canvas, and a custom DrawView
+- the hyroscope is implemented via the SensorEventListener interface and onSensorChange method.
+- The maze is hard-coded as a shape, and it contains bombs, and there is one exit.
+- the user can save and load the game via Preferences.
