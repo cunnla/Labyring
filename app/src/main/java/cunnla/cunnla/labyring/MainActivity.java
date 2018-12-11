@@ -9,6 +9,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.AttributeSet;
@@ -23,10 +24,15 @@ import android.widget.Toast;
 
 import org.xmlpull.v1.XmlPullParser;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 public class MainActivity extends AppCompatActivity implements SensorEventListener, View.OnClickListener {
 
     SensorManager sensorManager;
     Sensor sensor;
+    long lastUpdate = 0;  //making the app work slower
+
 
     Canvas canvas;
     DrawView drawView;
@@ -40,6 +46,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         sensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY);
+
 
         saveGame = (Button)findViewById(R.id.saveGame);
         saveGame.setOnClickListener(this);
@@ -60,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         drawView = (DrawView)findViewById(R.id.drawView);
 
         canvas = new Canvas();
+
     }
 
     @Override
@@ -69,15 +78,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             case R.id.saveGame:
                 sPref = getPreferences(MODE_PRIVATE);
                 SharedPreferences.Editor ed = sPref.edit();
-                ed.putInt("heroX", drawView.heroX);
-                ed.putInt("heroY", drawView.heroY);
+                //ed.putInt("heroX", drawView.heroX);
+                //ed.putInt("heroY", drawView.heroY);
                 ed.commit();
                 Toast.makeText(this, "Data saved", Toast.LENGTH_SHORT).show();
                 break;
             case R.id.loadGame:
                 sPref = getPreferences(MODE_PRIVATE);
-                drawView.heroX=sPref.getInt("heroX",drawView.heroXStart);
-                drawView.heroY=sPref.getInt("heroY", drawView.heroYStart);
+                //drawView.heroX=sPref.getInt("heroX",drawView.heroXStart);
+                //drawView.heroY=sPref.getInt("heroY", drawView.heroYStart);
                 Toast.makeText(this, "Data loaded", Toast.LENGTH_SHORT).show();
                 break;
             case R.id.startAgain:
@@ -93,10 +102,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Log.d(TAG, "Sensor");
         Log.d(TAG, event.values[0] + " "+event.values[1]+" "+event.values[2]);
 
-        if (event.values[0]<-1){ drawView.moveRight(canvas);}
-        if (event.values[0]>1) { drawView.moveLeft(canvas);}
-        if (event.values[1]<1) { drawView.moveUp(canvas);}
-        if (event.values[1]>1) { drawView.moveDown(canvas);}
+
+        long actualTime = event.timestamp;  //making the app work slower
+        final int sensorValue = 1;
+
+        if(actualTime - lastUpdate > 200000000) { //making the app work slower
+
+            if (event.values[0]<-sensorValue){ drawView.moveRight(canvas);}
+            if (event.values[0]>sensorValue) { drawView.moveLeft(canvas);}
+            if (event.values[1]<sensorValue) { drawView.moveUp(canvas);}
+            if (event.values[1]>sensorValue) { drawView.moveDown(canvas);}
+            lastUpdate = actualTime; //making the app work slower
+
+        }
+
+
+
 
 
         if (drawView.winGame()) {
@@ -107,7 +128,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         if (drawView.explode()) {
-            Log.d(TAG, "Expload!!");
+            Log.d(TAG, "Explode!!");
             Intent intent = new Intent(this, WinGameActivity.class);
             intent.putExtra("game", "Ooops! You lost the game!");
             startActivityForResult(intent, 1);
@@ -125,7 +146,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-        sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(this, sensor, 1000000);
         Log.d(TAG, "On resume");
     }
 

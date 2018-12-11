@@ -8,10 +8,13 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Region;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 import android.graphics.Path;
+
+import java.util.ArrayList;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -19,25 +22,13 @@ import static android.content.Context.MODE_PRIVATE;
 public class DrawView extends View {
 
     Paint paint;
+    Coordinates field;
 
-    Path hero;
-    int heroStep = 15;
-    int heroSize = 30;
-    int heroXStart = 300;
-    int heroYStart = 570;
-    int heroX = heroXStart;
-    int heroY = heroYStart;
+    Coordinates heroStart = new Coordinates(0,0);
+    Coordinates hero = new Coordinates(0,0);
+    Coordinates exit = new Coordinates(1,1);
+    ArrayList<Coordinates> bombsList = new ArrayList<Coordinates>();
 
-    Path walls;
-    Path target;
-
-    Path bomb1;
-    int bomb1XStart = 90;
-    int bomb1YStart = 450;
-
-    Path bomb2;
-    int bomb2XStart = 510;
-    int bomb2YStart = 90;
 
     private static final String TAG = "myLogs";
 
@@ -45,242 +36,214 @@ public class DrawView extends View {
 
     SharedPreferences sPref;
 
+    int[][] vMatrix = new int [][] {{0,0,0,2,0,0,0},
+                                    {0,4,0,1,1,1,0},
+                                    {0,1,0,0,0,1,0},
+                                    {0,1,1,1,1,1,0},
+                                    {0,1,0,0,0,0,0},
+                                    {0,1,1,1,1,4,0},
+                                    {0,0,0,3,0,0,0}};
 
-    // ////////   constructors
+    // 1 is path
+    // 2 is exit
+    // 3 is heroStart
+    // 4 is the bombs
+
+
+    //     ====  constructors  =====
 
     public DrawView(Context context){
         super(context);
 
         paint = new Paint();
-        walls = new Path();
-        target = new Path();
-        bomb1 = new Path();
-        bomb2 = new Path();
-        hero = new Path();
-
     }
 
     public DrawView(Context context, AttributeSet attrs) {
         super(context, attrs);
 
         paint = new Paint();
-        walls = new Path();
-        target = new Path();
-        bomb1 = new Path();
-        bomb2 = new Path();
-        hero = new Path();
     }
 
     public DrawView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
 
         paint = new Paint();
-        walls = new Path();
-        target = new Path();
-        bomb1 = new Path();
-        bomb2 = new Path();
-        hero = new Path();
     }
+
+    //     ====  end of constructors  =====
 
 
     public void onDraw (Canvas canvas){
-        canvas.drawColor(getResources().getColor(R.color.colorField));
-
-        paint.setColor(Color.BLACK);
-        paint.setStrokeWidth(1);
-        paint.setStyle(Paint.Style.STROKE);
-
-        walls.reset();
-        walls.moveTo(270, 630);
-        walls.lineTo(270, 540);
-        walls.lineTo(90, 540);
-        walls.lineTo(90, 90);
-        walls.lineTo(180, 90);
-        walls.lineTo(180, 270);
-        walls.lineTo(450, 270);
-        walls.lineTo(450, 180);
-        walls.lineTo(270, 180);
-        walls.lineTo(270, 0);
-
-        walls.moveTo(360, 630);
-        walls.lineTo(360, 540);
-        walls.lineTo(540, 540);
-        walls.lineTo(540, 450);
-        walls.lineTo(180, 450);
-        walls.lineTo(180, 360);
-        walls.lineTo(540, 360);
-        walls.lineTo(540, 90);
-        walls.lineTo(360, 90);
-        walls.lineTo(360, 0);
-
-        canvas.drawPath(walls, paint);
-
-        paint.setColor(getResources().getColor(R.color.colorTarget));
-        paint.setStrokeWidth(3);
-        paint.setStyle(Paint.Style.FILL);
-        target.reset();
-        target.moveTo(271, 0);
-        target.lineTo(360, 0);
-        target.lineTo(360, 90);
-        target.lineTo(271, 90);
-        target.close();
-        canvas.drawPath(target, paint);
-
-        paint.setColor(getResources().getColor(R.color.colorBomb));
-        paint.setStrokeWidth(3);
-        paint.setStyle(Paint.Style.FILL);
-        bomb1.reset();
-        bomb1.moveTo(bomb1XStart, bomb1YStart);
-        bomb1.lineTo(bomb1XStart+30, bomb1YStart);
-        bomb1.lineTo(bomb1XStart+30, bomb1YStart+30);
-        bomb1.lineTo(bomb1XStart, bomb1YStart+30);
-        bomb1.close();
-        canvas.drawPath(bomb1, paint);
-
-        paint.setColor(getResources().getColor(R.color.colorBomb));
-        paint.setStrokeWidth(3);
-        paint.setStyle(Paint.Style.FILL);
-        bomb2.reset();
-        bomb2.moveTo(bomb2XStart, bomb2YStart);
-        bomb2.lineTo(bomb2XStart+30, bomb2YStart);
-        bomb2.lineTo(bomb2XStart+30, bomb2YStart+30);
-        bomb2.lineTo(bomb2XStart, bomb2YStart+30);
-        bomb2.close();
-        canvas.drawPath(bomb2, paint);
 
 
+        //  ====    draw the matrix ======
+        for (int x=0; x<=Coordinates.fieldSize; x++) {
+            for (int y=0; y<=Coordinates.fieldSize; y++){
+
+                field = new Coordinates(x, y);  // coordinates to draw squares on the canvas
+                paint.setStrokeWidth(1);
+                paint.setStyle(Paint.Style.FILL);
+
+                switch (vMatrix[x][y]){
+                    case 0: //if it's the walls
+                        paint.setColor(getResources().getColor(R.color.colorField));
+                        break;
+                    case 1:   //if it's the path
+                        paint.setColor(Color.BLACK);
+                        break;
+                    case 2:   //if it's the exit
+                        paint.setColor(getResources().getColor(R.color.colorTarget));
+                        exit = new Coordinates (y, x);
+                        Log.d("Matrix", "exitX="+exit.x+", exitY="+exit.y);
+                        break;
+                    case 3:    //if it's the hero, then we determine the starting point
+                        hero = new Coordinates (y, x);
+                        heroStart = new Coordinates (y, x);
+                        vMatrix[x][y] = 1;     // make this square a passage
+                        paint.setColor(Color.BLACK);
+
+                        Log.d("Matrix", "hero.x="+hero.x+", hero.y="+hero.y);
+                        Log.d("Matrix", "vMatrix[x][y]="+vMatrix[x][y]);
+
+                        // we do not draw the hero square here, because the hero will be always moving. We just draw the field.
+                        break;
+                    case 4:    //if it's the bombs
+                        paint.setColor(getResources().getColor(R.color.colorBomb));
+                        bombsList.add(new Coordinates(y,x));
+                        break;
+                }
+                canvas.drawRect((float)field.coordToPx(y),(float)field.coordToPx(x),(float)field.coordToPx(y+1),(float)field.coordToPx(x+1),paint);
+            }
+        }
+        // =====    end of drawing the matrix ======
+
+        // === draw the hero =====
         paint.setColor(getResources().getColor(R.color.colorHero));
-        paint.setStrokeWidth(3);
-        paint.setStyle(Paint.Style.FILL);
-        hero.reset();
-        hero.moveTo(heroX, heroY);
-        hero.lineTo(heroX, heroY+heroSize);
-        hero.lineTo(heroX+heroSize, heroY+heroSize);
-        hero.lineTo(heroX+heroSize, heroY);
-        hero.close();
-        canvas.drawPath(hero, paint);
+        canvas.drawRect((float)hero.coordToPx(hero.x),(float)hero.coordToPx(hero.y),(float)hero.coordToPx(hero.x+1),(float)hero.coordToPx(hero.y+1),paint);
+
+
 
     }
 
+
     public void moveUp (Canvas canvas){
+        Log.d("Matrix", "Moving UP");
+        if ((hero.x>0)&&(hero.y>0)){Log.d("Matrix", "Next matrix cell:"+vMatrix[hero.x][hero.y-1]);}
+        Log.d("Matrix", "Next move:"+hero.x+", "+(hero.y-1));
 
-        Log.d(TAG, "Moving UP");
-
-        if (       ((heroY==540)&& (((heroX>90)&&(heroX<270)) || (((heroX+heroSize>90)&&(heroX+heroSize<270)))))
-                || ((heroY==270)&& (((heroX>180)&&(heroX<450)) || (((heroX+heroSize>180)&&(heroX+heroSize<450)))))
-                || ((heroY==90) && (((heroX>90)&&(heroX<180)) || (((heroX+heroSize>90)&&(heroX+heroSize<180)))))
-                || ((heroY==180)&& (((heroX>270)&&(heroX<450)) || (((heroX+heroSize>270)&&(heroX+heroSize<450)))))
-
-                || ((heroY==540)&& (((heroX>360)&&(heroX<540)) || (((heroX+heroSize>360)&&(heroX+heroSize<540)))))
-                || ((heroY==450)&& (((heroX>180)&&(heroX<540)) || (((heroX+heroSize>180)&&(heroX+heroSize<540)))))
-                || ((heroY==360)&& (((heroX>180)&&(heroX<540)) || (((heroX+heroSize>180)&&(heroX+heroSize<540)))))
-                || ((heroY==90) && (((heroX>360)&&(heroX<540)) || (((heroX+heroSize>360)&&(heroX+heroSize<540)))))      ){
+        if (hero.y>0) {
+                 if (vMatrix[hero.y-1][hero.x]==0){   // if next cell is not 0, and if this is not the end of matrix
+                    Log.d("Matrix", "Got to matrix cell=0 condition");
+                    intersects = true;
+                 }
+        } else if (hero.y ==0){
+            Log.d("Matrix", "Got to the top row");
             intersects = true;
-        };
+        }
 
-
-        if (heroY>=1 && !intersects ) {
-            heroY-=heroStep;
+        if (!intersects) {
+            hero.y-=1;
+            Log.d("Matrix", "new hero.y: "+hero.y);
             this.invalidate();
         }
         intersects = false;
     }
 
     public void moveDown (Canvas canvas){
-        Log.d(TAG, "Moving DOWN");
+        Log.d("Matrix", "Moving DOWN");
+        Log.d("Matrix", "Next move:"+hero.x+", "+(hero.y+1));
+ //       Log.d("Matrix", "Next matrix cell:"+vMatrix[heroX][heroY+1]);
 
-        if (       ((heroY+heroSize==540)&& (((heroX>90)&&(heroX<270)) || (((heroX+heroSize>90)&&(heroX+heroSize<270)))))
-                || ((heroY+heroSize==270)&& (((heroX>180)&&(heroX<450)) || (((heroX+heroSize>180)&&(heroX+heroSize<450)))))
-                || ((heroY+heroSize==90) && (((heroX>90)&&(heroX<180)) || (((heroX+heroSize>90)&&(heroX+heroSize<180)))))
-                || ((heroY+heroSize==180)&& (((heroX>270)&&(heroX<450)) || (((heroX+heroSize>270)&&(heroX+heroSize<450)))))
-
-                || ((heroY+heroSize==540)&& (((heroX>360)&&(heroX<540)) || (((heroX+heroSize>360)&&(heroX+heroSize<540)))))
-                || ((heroY+heroSize==450)&& (((heroX>180)&&(heroX<540)) || (((heroX+heroSize>180)&&(heroX+heroSize<540)))))
-                || ((heroY+heroSize==360)&& (((heroX>180)&&(heroX<540)) || (((heroX+heroSize>180)&&(heroX+heroSize<540)))))
-                || ((heroY+heroSize==90) && (((heroX>360)&&(heroX<540)) || (((heroX+heroSize>360)&&(heroX+heroSize<540)))))      ){
+        if (hero.y<Coordinates.fieldSize) {
+            if ((vMatrix[hero.y + 1][hero.x] == 0)) {   // if next cell is not 0, and if this is not the end of matrix
+                Log.d("Matrix", "Got to the bottom row");
+                intersects = true;
+            }
+        } else if (hero.y == Coordinates.fieldSize){
+            Log.d("Matrix", "Got to matrix cell count =6 condition");
             intersects = true;
-        };
+        }
 
-        if (heroY+heroSize<=629 && !intersects) {
-            heroY += heroStep;
+        if (!intersects ) {
+            hero.y+=1;
+            Log.d("Matrix", "new hero.y: "+hero.y);
             this.invalidate();
         }
         intersects = false;
     }
 
-    public void moveLeft (Canvas canvas){
-        Log.d(TAG, "Moving LEFT");
-        Log.d(TAG, "heroX="+heroX+", heroY="+heroY+", heroY+heroSize="+heroY+heroSize);
-
-        if (        ((heroX==270)&& (((heroY>540)&&(heroY<630)) || (((heroY+heroSize>540)&&(heroY+heroSize<630)))))
-                ||  ((heroX==90) && (((heroY>90)&&(heroY<540)) || (((heroY+heroSize>90)&&(heroY+heroSize<540)))))
-                ||  ((heroX==180)&& (((heroY>90)&&(heroY<270)) || (((heroY+heroSize>90)&&(heroY+heroSize<270)))))
-                ||  ((heroX==450)&& (((heroY>180)&&(heroY<270)) || (((heroY+heroSize>180)&&(heroY+heroSize<270)))))
-                ||  ((heroX==270)&& (((heroY>0)&&(heroY<180)) || (((heroY+heroSize>0)&&(heroY+heroSize<180)))))
-
-                ||  ((heroX==360)&& (((heroY>540)&&(heroY<630)) || (((heroY+heroSize>540)&&(heroY+heroSize<630)))))
-                ||  ((heroX==540)&& (((heroY>450)&&(heroY<540)) || (((heroY+heroSize>450)&&(heroY+heroSize<540)))))
-                ||  ((heroX==180)&& (((heroY>360)&&(heroY<450)) || (((heroY+heroSize>360)&&(heroY+heroSize<450)))))
-                ||  ((heroX==540)&& (((heroY>90)&&(heroY<360)) || (((heroY+heroSize>90)&&(heroY+heroSize<360)))))
-                ||  ((heroX==360)&& (((heroY>0)&&(heroY<90)) || (((heroY+heroSize>0)&&(heroY+heroSize<90)))))       ){
-
+    public void moveLeft  (Canvas canvas){
+        Log.d("Matrix", "Moving LEFT");
+        Log.d("Matrix", "Next move:"+hero.x+"-1"+", "+hero.y);
+        //       Log.d("Matrix", "Next matrix cell:"+vMatrix[heroX-1][heroY]);
+        if (hero.x>0) {
+            if (vMatrix[hero.y][hero.x-1]==0){   // if next cell is not 0, and if this is not the end of matrix
+                Log.d("Matrix", "Got to matrix cell=0 condition");
+                intersects = true;
+            }
+        } else if (hero.x ==0){
+            Log.d("Matrix", "Got to Left end");
             intersects = true;
         }
 
-
-        if ((heroX>=1)&& !intersects) {
-
-            heroX -= heroStep;
+        if (!intersects) {
+            hero.x-=1;
+            Log.d("Matrix", "new heroX: "+hero.x);
             this.invalidate();
         }
         intersects = false;
     }
 
-    public void moveRight (Canvas canvas){
-        Log.d(TAG, "Moving RIGHT");
-
-        if (        ((heroX+heroSize==270)&& (((heroY>540)&&(heroY<630)) || (((heroY+heroSize>540)&&(heroY+heroSize<630)))))
-                ||  ((heroX+heroSize==90) && (((heroY>90)&&(heroY<540)) || (((heroY+heroSize>90)&&(heroY+heroSize<540)))))
-                ||  ((heroX+heroSize==180)&& (((heroY>90)&&(heroY<270)) || (((heroY+heroSize>90)&&(heroY+heroSize<270)))))
-                ||  ((heroX+heroSize==450)&& (((heroY>180)&&(heroY<270)) || (((heroY+heroSize>180)&&(heroY+heroSize<270)))))
-                ||  ((heroX+heroSize==270)&& (((heroY>0)&&(heroY<180)) || (((heroY+heroSize>0)&&(heroY+heroSize<180)))))
-
-                ||  ((heroX+heroSize==360)&& (((heroY>540)&&(heroY<630)) || (((heroY+heroSize>540)&&(heroY+heroSize<630)))))
-                ||  ((heroX+heroSize==540)&& (((heroY>450)&&(heroY<540)) || (((heroY+heroSize>450)&&(heroY+heroSize<540)))))
-                ||  ((heroX+heroSize==180)&& (((heroY>360)&&(heroY<450)) || (((heroY+heroSize>360)&&(heroY+heroSize<450)))))
-                ||  ((heroX+heroSize==540)&& (((heroY>90)&&(heroY<360)) || (((heroY+heroSize>90)&&(heroY+heroSize<360)))))
-                ||  ((heroX+heroSize==360)&& (((heroY>0)&&(heroY<90)) || (((heroY+heroSize>0)&&(heroY+heroSize<90)))))       ){
+    public void moveRight  (Canvas canvas){
+        Log.d("Matrix", "Moving RIGHT");
+        Log.d("Matrix", "Next move:"+hero.x+1+", "+hero.y);
+        //       Log.d("Matrix", "Next matrix cell:"+vMatrix[heroX+1][heroY]);
+        if (hero.x<Coordinates.fieldSize) {
+            if (vMatrix[hero.y][hero.x+1]==0){   // if next cell is not 0, and if this is not the end of matrix
+                Log.d("Matrix", "Got to matrix cell=0 condition");
+                intersects = true;
+            }
+        } else if (hero.x ==Coordinates.fieldSize){
+            Log.d("Matrix", "Got to the Right end");
             intersects = true;
         }
 
-        if (heroX+heroSize<=629 && !intersects) {
-            heroX += heroStep;
+        if (!intersects) {
+            hero.x+=1;
+            Log.d("Matrix", "new heroX: "+hero.x);
             this.invalidate();
         }
         intersects = false;
     }
+
+
+
 
     public boolean winGame(){
         boolean win = false;
-        if ((heroX>=270)&& (heroX+heroSize<=360) && (heroY>=0)&&(heroY+heroSize<=90)){
+        if (hero.equals(exit)){
             win = true;
+            Log.d("Matrix", "Wingame: hero.x: "+hero.x+", hero.y: "+hero.y+ " exit.x: "+exit.x+", exit.y: "+exit.y);
         }
         return win;
     }
 
     public boolean explode(){
         boolean explode = false;
-
-        if (  (heroX==bomb1XStart)&&(heroY==bomb1YStart) ||
-              (heroX==bomb2XStart)&&(heroY==bomb2YStart)             ){
-            explode = true;
+        for (int i = 0; i < bombsList.size(); i++) {
+            Coordinates bomb = bombsList.get(i);
+            if (hero.equals(bomb)){
+                explode = true;
+  //              Log.d("Matrix", "Wingame: hero.x: "+hero.x+", hero.y: "+hero.y+ " bomb.x: "+bomb.x+", bomb.y: "+bomb.y);
+            }
         }
         return explode;
+        //return false;
     }
 
     public void startAgain(){
-        heroX = heroXStart;
-        heroY = heroYStart;
+        hero.x = heroStart.x;
+        hero.y = heroStart.y;
         this.invalidate();
     }
 
