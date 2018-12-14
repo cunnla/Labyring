@@ -15,6 +15,8 @@ import android.os.Bundle;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Xml;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.content.Context;
 import android.widget.Button;
@@ -24,6 +26,16 @@ import android.widget.Toast;
 
 import org.xmlpull.v1.XmlPullParser;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.lang.reflect.Array;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -37,10 +49,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     Canvas canvas;
     DrawView drawView;
 
+    LinearLayout llDrawView, llDrawButtons;
+
     Button saveGame;
     Button loadGame;
     Button startAgain;
     SharedPreferences sPref;
+
+    Button loadMap;
+    int[][] vMatrix;
 
     private static final String TAG = "myLogs";
 
@@ -65,108 +82,194 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 
         drawView = new DrawView(this);
+        drawView.reset();
         drawView = (DrawView)findViewById(R.id.drawView);
+        llDrawView = (LinearLayout) findViewById(R.id.llDrawView);
+        llDrawButtons = (LinearLayout) findViewById(R.id.llDrawButtons);
+        if (drawView.isEmpty()) {
+            llDrawButtons.removeAllViews();
+            llDrawView.removeAllViews();
+        }
 
         canvas = new Canvas();
 
+        loadMap = (Button)findViewById(R.id.loadMap);
+        loadMap.setOnClickListener(this);
+
     }
 
-    @Override
-    public void onClick(View v) {
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // TODO Auto-generated method stub
+        menu.add(0, 1, 1,"Draw a map");
+        menu.add(0, 2, 2,"Load a map");
+        return super.onCreateOptionsMenu(menu);
+    }
 
-        switch (v.getId()){
-            case R.id.saveGame:
-                sPref = getPreferences(MODE_PRIVATE);
-                SharedPreferences.Editor ed = sPref.edit();
-                //ed.putInt("heroX", drawView.heroX);
-                //ed.putInt("heroY", drawView.heroY);
-                ed.commit();
-                Toast.makeText(this, "Data saved", Toast.LENGTH_SHORT).show();
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // TODO Auto-generated method stub
+        Intent intent;
+        switch (item.getItemId()){
+            case 1:   // Draw and Save
+                intent = new Intent(this, SaveMap.class);
+                startActivity(intent);
                 break;
-            case R.id.loadGame:
-                sPref = getPreferences(MODE_PRIVATE);
-                //drawView.heroX=sPref.getInt("heroX",drawView.heroXStart);
-                //drawView.heroY=sPref.getInt("heroY", drawView.heroYStart);
-                Toast.makeText(this, "Data loaded", Toast.LENGTH_SHORT).show();
+            case 2:
+                intent = new Intent(this, LoadMap.class);
+                startActivityForResult(intent, 2);
                 break;
-            case R.id.startAgain:
-                drawView.startAgain();
-                break;
-        }
-
-    }
-
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        Log.d(TAG, "Sensor");
-        Log.d(TAG, event.values[0] + " "+event.values[1]+" "+event.values[2]);
-
-
-        long actualTime = event.timestamp;  //making the app work slower
-        final int sensorValue = 1;
-
-        if(actualTime - lastUpdate > 200000000) { //making the app work slower
-
-            if (event.values[0]<-sensorValue){ drawView.moveRight(canvas);}
-            if (event.values[0]>sensorValue) { drawView.moveLeft(canvas);}
-            if (event.values[1]<sensorValue) { drawView.moveUp(canvas);}
-            if (event.values[1]>sensorValue) { drawView.moveDown(canvas);}
-            lastUpdate = actualTime; //making the app work slower
 
         }
 
-
-
-
-
-        if (drawView.winGame()) {
-            Log.d(TAG, "YOU WIN!!! main");
-            Intent intent = new Intent(this, WinGameActivity.class);
-            intent.putExtra("game", "Congratulations! You won the game!");
-            startActivityForResult(intent, 1);
-        }
-
-        if (drawView.explode()) {
-            Log.d(TAG, "Explode!!");
-            Intent intent = new Intent(this, WinGameActivity.class);
-            intent.putExtra("game", "Ooops! You lost the game!");
-            startActivityForResult(intent, 1);
-        }
-
-
-
+        Toast.makeText(this, item.getTitle(), Toast.LENGTH_SHORT).show();
+        return super.onOptionsItemSelected(item);
     }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        sensorManager.registerListener(this, sensor, 1000000);
-        Log.d(TAG, "On resume");
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        sensorManager.unregisterListener(this);
-        Log.d(TAG, "On pause");
-    }
-
-
-
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (data == null) {return;}
-        Log.d(TAG, "Got Result!");
-        drawView.startAgain();
+        if (data == null) {
+            return;
+        }
+        switch (requestCode) {
+            case 1:  // WinGame or Explode
+                drawView.startAgain();
+                break;
+            case 2:  // Load Map
+               // Log.d("Files", "Load Map: Got here");
+                Bundle bundle = data.getExtras();
+                drawView.vMatrix = (int[][])bundle.getSerializable("vMatrix");
+                Log.d("Files", "Load Map: Got here");
+                llDrawView.addView(drawView);
+                llDrawButtons.addView(saveGame);
+                llDrawButtons.addView(loadGame);
+                llDrawButtons.addView(startAgain);
+
+                drawView.invalidate();
+                break;
+
+
+        }
     }
 
+        @Override
+        public void onClick (View v){
+
+            switch (v.getId()) {
+                case R.id.saveGame:
+                    sPref = getPreferences(MODE_PRIVATE);
+                    SharedPreferences.Editor ed = sPref.edit();
+                    ed.putInt("hero.x", drawView.hero.x);
+                    ed.putInt("hero.y", drawView.hero.y);
+                    ed.commit();
+                    Toast.makeText(this, "Data saved", Toast.LENGTH_SHORT).show();
+                    break;
+                case R.id.loadGame:
+                    sPref = getPreferences(MODE_PRIVATE);
+                    drawView.hero.x = sPref.getInt("hero.x", drawView.heroStart.x);
+                    drawView.hero.y = sPref.getInt("hero.y", drawView.heroStart.y);
+                    Toast.makeText(this, "Data loaded", Toast.LENGTH_SHORT).show();
+                    drawView.invalidate();
+                    break;
+                case R.id.startAgain:
+                    drawView.startAgain();
+                    break;
+                case R.id.loadMap:
+                    try {
+                        FileInputStream fin = openFileInput("map1");
+                        int[][] vMatrix = new int[7][7];
+                        for (int x = 0; x <= Coordinates.fieldSize; x++) {
+                            String mResult = "";
+                            for (int y = 0; y <= Coordinates.fieldSize; y++) {
+                                vMatrix[x][y] = fin.read();
+                                mResult += vMatrix[x][y];
+                            }
+                            Log.d("Files", "Read file: " + mResult);
+                        }
+                        fin.close();
+                        drawView.vMatrix = vMatrix;
+                        if (!drawView.isEmpty()) {
+                            llDrawView.addView(drawView);
+                            llDrawButtons.addView(saveGame);
+                            llDrawButtons.addView(loadGame);
+                            llDrawButtons.addView(startAgain);
+                            drawView.invalidate();
+                        }
+
+                    } catch (FileNotFoundException e) {
+                        Log.e("Files", e.getMessage());
+                    } catch (IOException e) {
+                        Log.e("Files", e.getMessage());
+                    }
+                    break;
 
 
-}
+            }
+        }
+
+
+        @Override
+        public void onSensorChanged (SensorEvent event){
+            Log.d(TAG, "Sensor");
+            Log.d(TAG, event.values[0] + " " + event.values[1] + " " + event.values[2]);
+
+
+            long actualTime = event.timestamp;  //making the app work slower
+            final int sensorValue = 1;
+
+            if (actualTime - lastUpdate > 200000000) { //making the app work slower
+
+                if (event.values[0] < -sensorValue) {
+                    drawView.moveRight(canvas);
+                }
+                if (event.values[0] > sensorValue) {
+                    drawView.moveLeft(canvas);
+                }
+                if (event.values[1] < sensorValue) {
+                    drawView.moveUp(canvas);
+                }
+                if (event.values[1] > sensorValue) {
+                    drawView.moveDown(canvas);
+                }
+                lastUpdate = actualTime; //making the app work slower
+
+            }
+
+
+            if (drawView.winGame()) {
+                Log.d(TAG, "YOU WIN!!! main");
+                Intent intent = new Intent(this, WinGameActivity.class);
+                intent.putExtra("game", "Congratulations! You won the game!");
+                startActivityForResult(intent, 1);
+            }
+
+            if (drawView.explode()) {
+                Log.d(TAG, "Explode!!");
+                Intent intent = new Intent(this, WinGameActivity.class);
+                intent.putExtra("game", "Ooops! You lost the game!");
+                startActivityForResult(intent, 1);
+            }
+
+
+        }
+
+        @Override
+        public void onAccuracyChanged (Sensor sensor,int accuracy){
+
+        }
+
+        @Override
+        protected void onResume () {
+            super.onResume();
+            sensorManager.registerListener(this, sensor, 1000000);
+            Log.d(TAG, "On resume");
+        }
+
+        @Override
+        protected void onPause () {
+            super.onPause();
+            sensorManager.unregisterListener(this);
+            Log.d(TAG, "On pause");
+        }
+
+
+
+  }

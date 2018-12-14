@@ -7,15 +7,24 @@
     android:orientation="vertical"
     android:keepScreenOn="true">
 
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/llDrawView"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
 
-    <cunnla.cunnla.labyring.DrawView
-        android:id="@+id/drawView"
-        android:layout_margin="3dp"
-        android:layout_width="630px"
-        android:layout_height="630px"/>
+        <cunnla.cunnla.labyring.DrawView
+            android:id="@+id/drawView"
+            android:layout_margin="3dp"
+            android:layout_width="630px"
+            android:layout_height="630px"/>
+
+    </LinearLayout>
 
 
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/llDrawButtons"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -40,6 +49,12 @@
             android:text="Start Again"/>
 
     </LinearLayout>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/loadMap"
+        android:text="Load this Map"/>
 
 
 </LinearLayout>
