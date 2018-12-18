@@ -49,15 +49,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     Canvas canvas;
     DrawView drawView;
 
-    LinearLayout llDrawView, llDrawButtons;
+    LinearLayout llDrawView, llDrawButtons, v;
 
     Button saveGame;
     Button loadGame;
     Button startAgain;
     SharedPreferences sPref;
-
-    Button loadMap;
-    int[][] vMatrix;
 
     private static final String TAG = "myLogs";
 
@@ -84,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         drawView = new DrawView(this);
         drawView.reset();
         drawView = (DrawView)findViewById(R.id.drawView);
+        v = (LinearLayout) findViewById(R.id.v);
         llDrawView = (LinearLayout) findViewById(R.id.llDrawView);
         llDrawButtons = (LinearLayout) findViewById(R.id.llDrawButtons);
         if (drawView.isEmpty()) {
@@ -93,8 +91,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         canvas = new Canvas();
 
-        loadMap = (Button)findViewById(R.id.loadMap);
-        loadMap.setOnClickListener(this);
 
     }
 
@@ -135,14 +131,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 break;
             case 2:  // Load Map
                // Log.d("Files", "Load Map: Got here");
+                llDrawButtons.removeAllViews();
+                llDrawView.removeAllViews();
+
                 Bundle bundle = data.getExtras();
                 drawView.vMatrix = (int[][])bundle.getSerializable("vMatrix");
-                Log.d("Files", "Load Map: Got here");
+
+                //Log.d("Files", "Load Map: Got here");
                 llDrawView.addView(drawView);
                 llDrawButtons.addView(saveGame);
                 llDrawButtons.addView(loadGame);
                 llDrawButtons.addView(startAgain);
-
                 drawView.invalidate();
                 break;
 
@@ -172,35 +171,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 case R.id.startAgain:
                     drawView.startAgain();
                     break;
-                case R.id.loadMap:
-                    try {
-                        FileInputStream fin = openFileInput("map1");
-                        int[][] vMatrix = new int[7][7];
-                        for (int x = 0; x <= Coordinates.fieldSize; x++) {
-                            String mResult = "";
-                            for (int y = 0; y <= Coordinates.fieldSize; y++) {
-                                vMatrix[x][y] = fin.read();
-                                mResult += vMatrix[x][y];
-                            }
-                            Log.d("Files", "Read file: " + mResult);
-                        }
-                        fin.close();
-                        drawView.vMatrix = vMatrix;
-                        if (!drawView.isEmpty()) {
-                            llDrawView.addView(drawView);
-                            llDrawButtons.addView(saveGame);
-                            llDrawButtons.addView(loadGame);
-                            llDrawButtons.addView(startAgain);
-                            drawView.invalidate();
-                        }
-
-                    } catch (FileNotFoundException e) {
-                        Log.e("Files", e.getMessage());
-                    } catch (IOException e) {
-                        Log.e("Files", e.getMessage());
-                    }
-                    break;
-
 
             }
         }
